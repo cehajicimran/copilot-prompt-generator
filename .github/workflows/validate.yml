@@ -1,0 +1,95 @@
+name: Validate HTML & Performance
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Validate HTML
+        run: |
+          echo "🔍 Validating HTML structure..."
+          if grep -q "<!DOCTYPE html>" index.html; then
+            echo "✅ Valid DOCTYPE declaration found"
+          else
+            echo "❌ Missing DOCTYPE declaration"
+            exit 1
+          fi
+          
+          if grep -q "<title>" index.html; then
+            echo "✅ Title tag found"
+          else
+            echo "❌ Missing title tag"
+            exit 1
+          fi
+          
+          if grep -q "<meta charset" index.html; then
+            echo "✅ Charset meta tag found"
+          else
+            echo "❌ Missing charset meta tag"
+            exit 1
+          fi
+      
+      - name: Check file size
+        run: |
+          SIZE=$(wc -c < index.html)
+          SIZE_KB=$((SIZE / 1024))
+          echo "📊 File size: ${SIZE_KB} KB"
+          
+          if [ $SIZE -lt 100000 ]; then
+            echo "✅ File size is acceptable"
+          else
+            echo "⚠️ Warning: File size is large (${SIZE_KB} KB)"
+          fi
+      
+      - name: Verify CSS integrity
+        run: |
+          echo "🎨 Checking CSS structure..."
+          STYLE_COUNT=$(grep -c "<style>" index.html)
+          if [ $STYLE_COUNT -eq 1 ]; then
+            echo "✅ Single style block found"
+          else
+            echo "⚠️ Multiple style blocks found"
+          fi
+      
+      - name: Verify JavaScript integrity
+        run: |
+          echo "⚙️ Checking JavaScript structure..."
+          SCRIPT_COUNT=$(grep -c "<script>" index.html)
+          if [ $SCRIPT_COUNT -eq 1 ]; then
+            echo "✅ Single script block found"
+          else
+            echo "⚠️ Multiple script blocks found"
+          fi
+      
+      - name: Check for required elements
+        run: |
+          echo "🔎 Checking for required elements..."
+          ELEMENTS=("taskType" "language" "framework" "description" "context" "outputBox" "generatePrompt" "copyToClipboard")
+          for element in "${ELEMENTS[@]}"; do
+            if grep -q "$element" index.html; then
+              echo "✅ Found: $element"
+            else
+              echo "⚠️ Missing: $element"
+            fi
+          done
+      
+      - name: Validate watermark
+        run: |
+          echo "🇧🇦 Checking for watermark..."
+          if grep -q "Made with love from" index.html; then
+            echo "✅ Watermark found"
+          else
+            echo "❌ Watermark missing"
+            exit 1
+          fi
