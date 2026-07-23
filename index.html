@@ -376,21 +376,6 @@
             border-top: 2px solid #e0e0e0;
         }
 
-        .color-picker-group {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        input[type="color"] {
-            width: 50px;
-            height: 50px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -437,6 +422,34 @@
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #e0e0e0;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .watermark {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+
+        .watermark a {
+            color: #667eea;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .watermark a:hover {
+            color: #764ba2;
+            text-decoration: underline;
         }
 
         @media (max-width: 768px) {
@@ -672,6 +685,13 @@
                 </div>
             </div>
         </div>
+
+        <div class="footer">
+            <div class="watermark">
+                <span>Made with love from</span>
+                <span>🇧🇦</span>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -882,7 +902,7 @@
         // Copy to clipboard
         function copyToClipboard() {
             const text = document.getElementById('outputBox').textContent;
-            if (!text) {
+            if (!text || text === 'Your generated prompt will appear here...') {
                 alert('Generate a prompt first!');
                 return;
             }
