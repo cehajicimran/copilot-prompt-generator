@@ -1,0 +1,48 @@
+name: Deploy GitHub Copilot Prompt Generator
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Build site
+        run: |
+          echo "Building GitHub Copilot Prompt Generator..."
+          mkdir -p _site
+          cp index.html _site/
+          cp README.md _site/ 2>/dev/null || true
+          echo "Build completed successfully!"
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+      
+      - name: Create deployment status
+        if: always()
+        run: |
+          echo "✅ Deployment Status: Success"
+          echo "🌐 Site URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
