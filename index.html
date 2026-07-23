@@ -1,1 +1,1111 @@
-<!doctype html><html><head><link rel="stylesheet" href="assets/css/base.css"></head><body><div id="app"></div><script type="module" src="assets/js/app.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Copilot Prompt Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-gradient-start: #667eea;
+            --bg-gradient-end: #764ba2;
+            --text-primary: #333;
+            --text-secondary: #555;
+            --text-tertiary: #666;
+            --bg-primary: white;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #fafafa;
+            --border-color: #e0e0e0;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --input-bg: white;
+            --card-bg: rgba(102, 126, 234, 0.1);
+            --code-bg: #f8f9fa;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+        }
+
+        html.dark-mode {
+            --bg-gradient-start: #667eea;
+            --bg-gradient-end: #764ba2;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --text-tertiary: #909090;
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #2d2d2d;
+            --bg-tertiary: #252525;
+            --border-color: #404040;
+            --shadow-color: rgba(0, 0, 0, 0.7);
+            --input-bg: #2d2d2d;
+            --card-bg: rgba(102, 126, 234, 0.2);
+            --code-bg: #2d2d2d;
+            --success-bg: #1b5e20;
+            --success-text: #90ee90;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            transition: background 0.3s ease;
+        }
+
+        .container {
+            background: var(--bg-primary);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px var(--shadow-color);
+            max-width: 1200px;
+            width: 100%;
+            overflow: hidden;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.8);
+            transform: scale(1.1);
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.95);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 40px;
+        }
+
+        .section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: var(--text-primary);
+            font-weight: 600;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+            transition: color 0.3s ease;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.95em;
+            transition: color 0.3s ease;
+        }
+
+        .label-with-icon {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon-info {
+            width: 18px;
+            height: 18px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            cursor: help;
+            position: relative;
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 10;
+        }
+
+        .icon-info:hover .tooltip {
+            opacity: 1;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea,
+        select {
+            padding: 12px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 1em;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: var(--input-bg);
+            color: var(--text-primary);
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .slider-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+            background: var(--bg-secondary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: background 0.3s ease;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        input[type="checkbox"] + label {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+            border-color: #667eea;
+        }
+
+        .btn-copy {
+            background: #10b981;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-copy:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .output-section {
+            grid-column: 1 / -1;
+            border-top: 2px solid var(--border-color);
+            padding-top: 30px;
+            transition: border-color 0.3s ease;
+        }
+
+        .output-box {
+            background: var(--code-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.95em;
+            line-height: 1.6;
+            color: var(--text-primary);
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            transition: all 0.3s ease;
+        }
+
+        .output-box:empty::before {
+            content: "Your generated prompt will appear here...";
+            color: var(--text-tertiary);
+            font-style: italic;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .btn-preset {
+            padding: 8px 16px;
+            background: var(--bg-primary);
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .btn-preset:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .advanced-options {
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 15px;
+            background: var(--bg-tertiary);
+            transition: all 0.3s ease;
+        }
+
+        .advanced-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-primary);
+            transition: color 0.3s ease;
+        }
+
+        .toggle-arrow {
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-arrow.open {
+            transform: rotate(90deg);
+        }
+
+        .advanced-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .advanced-content.open {
+            max-height: 500px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid var(--border-color);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+            transition: color 0.3s ease;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: var(--text-tertiary);
+            margin-top: 5px;
+            transition: color 0.3s ease;
+        }
+
+        .success-message {
+            background: var(--success-bg);
+            color: var(--success-text);
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: none;
+            animation: slideIn 0.3s ease;
+            transition: all 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .footer {
+            background: var(--bg-secondary);
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9em;
+            color: var(--text-tertiary);
+            transition: all 0.3s ease;
+        }
+
+        .watermark {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+
+        .watermark a {
+            color: #667eea;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .watermark a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .header {
+                padding: 30px 20px;
+            }
+
+            .theme-toggle {
+                width: 45px;
+                height: 45px;
+                font-size: 1.2em;
+                top: 15px;
+                right: 15px;
+            }
+
+            .output-section {
+                grid-column: 1;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Scrollbar styling for dark mode */
+        html.dark-mode ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        html.dark-mode ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+        }
+
+        html.dark-mode ::-webkit-scrollbar-thumb {
+            background: #404040;
+            border-radius: 5px;
+        }
+
+        html.dark-mode ::-webkit-scrollbar-thumb:hover {
+            background: #505050;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode" aria-label="Toggle Dark Mode">
+                <span id="themeIcon">🌙</span>
+            </button>
+            <h1>🚀 GitHub Copilot Prompt Generator</h1>
+            <p>Create powerful, context-aware prompts with advanced configuration options</p>
+        </div>
+
+        <div class="content">
+            <!-- Left Section: Basic Input -->
+            <div class="section">
+                <h2 class="section-title">📝 Basic Configuration</h2>
+
+                <div class="form-group">
+                    <label for="taskType">Task Type</label>
+                    <select id="taskType">
+                        <option value="">Select a task type...</option>
+                        <option value="code-generation">Code Generation</option>
+                        <option value="bug-fix">Bug Fix & Debugging</option>
+                        <option value="refactoring">Code Refactoring</option>
+                        <option value="documentation">Documentation</option>
+                        <option value="testing">Unit Testing</option>
+                        <option value="optimization">Performance Optimization</option>
+                        <option value="architecture">Architecture Design</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="language">Programming Language</label>
+                    <select id="language">
+                        <option value="">Select a language...</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                        <option value="csharp">C#</option>
+                        <option value="cpp">C++</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="framework">Framework/Library</label>
+                    <input type="text" id="framework" placeholder="e.g., React, Django, Spring Boot">
+                </div>
+
+                <div class="form-group">
+                    <div class="label-with-icon">
+                        <label for="description">Task Description</label>
+                        <div class="icon-info">
+                            ?
+                            <div class="tooltip">Describe what you want Copilot to help with</div>
+                        </div>
+                    </div>
+                    <textarea id="description" placeholder="Describe your task in detail..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="context">Additional Context</label>
+                    <textarea id="context" placeholder="Provide any relevant context, constraints, or requirements..."></textarea>
+                </div>
+            </div>
+
+            <!-- Right Section: Advanced Options -->
+            <div class="section">
+                <h2 class="section-title">⚙️ Advanced Configuration</h2>
+
+                <div class="preset-buttons">
+                    <button class="btn-preset" onclick="loadPreset('code-generation')">💻 Generate Code</button>
+                    <button class="btn-preset" onclick="loadPreset('optimize')">⚡ Optimize</button>
+                    <button class="btn-preset" onclick="loadPreset('debug')">🐛 Debug</button>
+                    <button class="btn-preset" onclick="loadPreset('document')">📚 Document</button>
+                </div>
+
+                <div class="form-group">
+                    <div class="label-with-icon">
+                        <label for="creativity">Creativity Level</label>
+                        <div class="icon-info">
+                            ?
+                            <div class="tooltip">How creative/experimental should Copilot be?</div>
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <input type="range" id="creativity" min="0" max="100" value="50">
+                        <span class="slider-value" id="creativityValue">50</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="label-with-icon">
+                        <label for="codeLength">Code Length Preference</label>
+                        <div class="icon-info">
+                            ?
+                            <div class="tooltip">Prefer concise or detailed implementations?</div>
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <input type="range" id="codeLength" min="0" max="100" value="50">
+                        <span class="slider-value" id="codeLengthValue">50</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Code Style Preferences</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="functional" value="functional">
+                            <label for="functional">Functional</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="oop" value="oop">
+                            <label for="oop">OOP</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="async" value="async">
+                            <label for="async">Async/Await</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Quality Focus</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="performance" value="performance">
+                            <label for="performance">Performance</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="security" value="security">
+                            <label for="security">Security</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="readability" value="readability">
+                            <label for="readability">Readability</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="advanced-options">
+                    <div class="advanced-toggle" onclick="toggleAdvanced()">
+                        <span class="toggle-arrow" id="advancedArrow">▶</span>
+                        <span>Advanced Options</span>
+                    </div>
+                    <div class="advanced-content" id="advancedContent">
+                        <div class="form-group">
+                            <label for="temperature">Temperature (Randomness)</label>
+                            <div class="slider-group">
+                                <input type="range" id="temperature" min="0" max="200" value="70" step="10">
+                                <span class="slider-value" id="temperatureValue">0.7</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="maxTokens">Max Tokens</label>
+                            <input type="number" id="maxTokens" value="500" min="100" max="4000" step="100">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Include in Prompt</label>
+                            <div class="checkbox-group">
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="includeComments" value="comments" checked>
+                                    <label for="includeComments">Comments</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="includeTypes" value="types" checked>
+                                    <label for="includeTypes">Type Hints</label>
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="includeTests" value="tests">
+                                    <label for="includeTests">Test Cases</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output Section -->
+            <div class="output-section">
+                <h2 class="section-title">✨ Generated Prompt</h2>
+
+                <div class="success-message" id="successMessage">
+                    ✅ Prompt copied to clipboard!
+                </div>
+
+                <div class="output-box" id="outputBox"></div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="wordCount">0</div>
+                        <div class="stat-label">Words</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="charCount">0</div>
+                        <div class="stat-label">Characters</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="complexity">Low</div>
+                        <div class="stat-label">Complexity</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="quality">Good</div>
+                        <div class="stat-label">Quality Score</div>
+                    </div>
+                </div>
+
+                <div class="button-group" style="margin-top: 20px;">
+                    <button class="btn-primary" onclick="generatePrompt()">🎯 Generate Prompt</button>
+                    <button class="btn-copy" onclick="copyToClipboard()">📋 Copy Prompt</button>
+                    <button class="btn-secondary" onclick="resetForm()">🔄 Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="watermark">
+                <span>Made with love from</span>
+                <span>🇧🇦</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Theme Toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            
+            if (html.classList.contains('dark-mode')) {
+                html.classList.remove('dark-mode');
+                icon.textContent = '🌙';
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark-mode');
+                icon.textContent = '☀️';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Load theme preference from localStorage
+        function loadThemePreference() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const isDark = savedTheme === 'dark' || (savedTheme === null && prefersDark);
+            
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            
+            if (isDark) {
+                html.classList.add('dark-mode');
+                icon.textContent = '☀️';
+            } else {
+                html.classList.remove('dark-mode');
+                icon.textContent = '🌙';
+            }
+        }
+
+        // Update slider display values
+        document.getElementById('creativity').addEventListener('input', function() {
+            document.getElementById('creativityValue').textContent = this.value;
+        });
+
+        document.getElementById('codeLength').addEventListener('input', function() {
+            document.getElementById('codeLengthValue').textContent = this.value;
+        });
+
+        document.getElementById('temperature').addEventListener('input', function() {
+            document.getElementById('temperatureValue').textContent = (this.value / 100).toFixed(2);
+        });
+
+        // Toggle advanced options
+        function toggleAdvanced() {
+            const content = document.getElementById('advancedContent');
+            const arrow = document.getElementById('advancedArrow');
+            content.classList.toggle('open');
+            arrow.classList.toggle('open');
+        }
+
+        // Load preset configurations
+        function loadPreset(preset) {
+            const presets = {
+                'code-generation': {
+                    taskType: 'code-generation',
+                    creativity: 60,
+                    codeLength: 70,
+                    styles: ['functional', 'async'],
+                    focus: ['readability', 'performance']
+                },
+                'optimize': {
+                    taskType: 'optimization',
+                    creativity: 40,
+                    codeLength: 40,
+                    styles: ['functional'],
+                    focus: ['performance', 'security']
+                },
+                'debug': {
+                    taskType: 'bug-fix',
+                    creativity: 30,
+                    codeLength: 60,
+                    styles: [],
+                    focus: ['security', 'readability']
+                },
+                'document': {
+                    taskType: 'documentation',
+                    creativity: 50,
+                    codeLength: 30,
+                    styles: [],
+                    focus: ['readability']
+                }
+            };
+
+            const config = presets[preset];
+            if (config) {
+                document.getElementById('taskType').value = config.taskType;
+                document.getElementById('creativity').value = config.creativity;
+                document.getElementById('creativityValue').textContent = config.creativity;
+                document.getElementById('codeLength').value = config.codeLength;
+                document.getElementById('codeLengthValue').textContent = config.codeLength;
+
+                // Reset checkboxes
+                document.querySelectorAll('.checkbox-item input[type="checkbox"]').forEach(cb => {
+                    cb.checked = false;
+                });
+
+                // Set selected options
+                config.styles.forEach(style => {
+                    const elem = document.getElementById(style);
+                    if (elem) elem.checked = true;
+                });
+
+                config.focus.forEach(focus => {
+                    const elem = document.getElementById(focus);
+                    if (elem) elem.checked = true;
+                });
+
+                generatePrompt();
+            }
+        }
+
+        // Generate the prompt
+        function generatePrompt() {
+            const taskType = document.getElementById('taskType').value;
+            const language = document.getElementById('language').value;
+            const framework = document.getElementById('framework').value;
+            const description = document.getElementById('description').value;
+            const context = document.getElementById('context').value;
+            const creativity = document.getElementById('creativity').value;
+            const codeLength = document.getElementById('codeLength').value;
+            const temperature = (document.getElementById('temperature').value / 100).toFixed(2);
+            const maxTokens = document.getElementById('maxTokens').value;
+
+            // Gather selected options
+            const styles = [];
+            const focus = [];
+
+            document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked').forEach(cb => {
+                if (['functional', 'oop', 'async'].includes(cb.id)) {
+                    styles.push(cb.value);
+                } else if (['performance', 'security', 'readability'].includes(cb.id)) {
+                    focus.push(cb.value);
+                }
+            });
+
+            const includeComments = document.getElementById('includeComments').checked;
+            const includeTypes = document.getElementById('includeTypes').checked;
+            const includeTests = document.getElementById('includeTests').checked;
+
+            // Generate prompt
+            let prompt = '';
+
+            prompt += '🤖 GITHUB COPILOT PROMPT REQUEST\n';
+            prompt += '='.repeat(50) + '\n\n';
+
+            prompt += '📋 TASK OVERVIEW\n';
+            prompt += '-'.repeat(50) + '\n';
+            prompt += `Task Type: ${taskType || 'Not specified'}\n`;
+            if (language) prompt += `Language: ${language}\n`;
+            if (framework) prompt += `Framework: ${framework}\n`;
+            if (description) prompt += `\nDescription:\n${description}\n`;
+            if (context) prompt += `\nContext & Requirements:\n${context}\n`;
+
+            prompt += '\n⚙️ CONFIGURATION PARAMETERS\n';
+            prompt += '-'.repeat(50) + '\n';
+            prompt += `Creativity Level: ${creativity}% (${getCreativityLabel(creativity)})\n`;
+            prompt += `Code Length: ${codeLength}% (${getCodeLengthLabel(codeLength)})\n`;
+            prompt += `Temperature: ${temperature}\n`;
+            prompt += `Max Tokens: ${maxTokens}\n`;
+
+            if (styles.length > 0) {
+                prompt += `\nCode Style Preferences: ${styles.join(', ')}\n`;
+            }
+
+            if (focus.length > 0) {
+                prompt += `Quality Focus Areas: ${focus.join(', ')}\n`;
+            }
+
+            prompt += '\n📝 OUTPUT SPECIFICATIONS\n';
+            prompt += '-'.repeat(50) + '\n';
+            prompt += `Include Comments: ${includeComments ? 'Yes' : 'No'}\n`;
+            prompt += `Include Type Hints: ${includeTypes ? 'Yes' : 'No'}\n`;
+            prompt += `Include Test Cases: ${includeTests ? 'Yes' : 'No'}\n`;
+
+            prompt += '\n💡 INSTRUCTIONS\n';
+            prompt += '-'.repeat(50) + '\n';
+            prompt += '1. Provide a complete, working solution\n';
+            prompt += '2. Follow the specified coding style preferences\n';
+            prompt += '3. Focus on the specified quality areas\n';
+            prompt += '4. Include appropriate error handling\n';
+            prompt += '5. Add explanatory comments if requested\n';
+
+            prompt += '\n' + '='.repeat(50) + '\n';
+            prompt += 'Ready for Copilot assistance! 🚀\n';
+
+            // Display output
+            document.getElementById('outputBox').textContent = prompt;
+
+            // Update stats
+            updateStats(prompt);
+        }
+
+        function getCreativityLabel(value) {
+            if (value < 30) return 'Conservative';
+            if (value < 60) return 'Balanced';
+            if (value < 80) return 'Creative';
+            return 'Experimental';
+        }
+
+        function getCodeLengthLabel(value) {
+            if (value < 40) return 'Concise';
+            if (value < 70) return 'Moderate';
+            return 'Detailed';
+        }
+
+        // Update statistics
+        function updateStats(prompt) {
+            const words = prompt.trim().split(/\s+/).length;
+            const chars = prompt.length;
+            
+            document.getElementById('wordCount').textContent = words;
+            document.getElementById('charCount').textContent = chars;
+
+            // Calculate complexity
+            const hasAdvanced = document.getElementById('advancedContent').classList.contains('open');
+            const complexity = hasAdvanced ? 'High' : (words > 200 ? 'Medium' : 'Low');
+            document.getElementById('complexity').textContent = complexity;
+
+            // Calculate quality score
+            const taskType = document.getElementById('taskType').value;
+            const hasDescription = document.getElementById('description').value.length > 0;
+            const hasFocus = document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked').length > 0;
+            
+            let score = 0;
+            if (taskType) score += 25;
+            if (hasDescription) score += 30;
+            if (hasFocus) score += 25;
+            if (words > 100) score += 20;
+
+            const quality = score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Fair' : 'Poor';
+            document.getElementById('quality').textContent = quality;
+        }
+
+        // Copy to clipboard
+        function copyToClipboard() {
+            const text = document.getElementById('outputBox').textContent;
+            if (!text || text === 'Your generated prompt will appear here...') {
+                alert('Generate a prompt first!');
+                return;
+            }
+
+            navigator.clipboard.writeText(text).then(() => {
+                const msg = document.getElementById('successMessage');
+                msg.style.display = 'block';
+                setTimeout(() => {
+                    msg.style.display = 'none';
+                }, 3000);
+            }).catch(() => {
+                alert('Failed to copy to clipboard');
+            });
+        }
+
+        // Reset form
+        function resetForm() {
+            document.querySelectorAll('input, textarea, select').forEach(elem => {
+                if (elem.type === 'checkbox') {
+                    elem.checked = false;
+                } else if (elem.type === 'range') {
+                    elem.value = elem.id === 'temperature' ? 70 : elem.id === 'creativity' || elem.id === 'codeLength' ? 50 : 500;
+                } else {
+                    elem.value = '';
+                }
+            });
+
+            document.getElementById('includeComments').checked = true;
+            document.getElementById('includeTypes').checked = true;
+
+            document.getElementById('outputBox').textContent = '';
+            document.getElementById('wordCount').textContent = '0';
+            document.getElementById('charCount').textContent = '0';
+            document.getElementById('complexity').textContent = 'Low';
+            document.getElementById('quality').textContent = 'Good';
+
+            // Update slider displays
+            document.getElementById('creativityValue').textContent = '50';
+            document.getElementById('codeLengthValue').textContent = '50';
+            document.getElementById('temperatureValue').textContent = '0.70';
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadThemePreference();
+            generatePrompt();
+        });
+    </script>
+</body>
+</html>
